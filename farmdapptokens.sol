@@ -2,20 +2,22 @@
 
 pragma solidity ^0.8.1;
 
+import "@openzeppelin/contracts/token/ERC1155/IERC1155.sol";
+import "@openzeppelin/contracts/token/ERC1155/utils/ERC1155Holder.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-
-
 
 
 
 contract farming {		
-	string public name = "Dapp Token Farm";
 	using SafeERC20 for IERC20;
 	IERC20 private dappToken;
 	IERC20 public daiToken;
-	uint256 private totalTokens;
+
+    
+	
 
 	uint256 month = 2629743;
 
@@ -26,14 +28,14 @@ contract farming {
 	mapping(address => Staker) public stakes;
 
 
-	constructor( address _dappToken, address _daiToken)  {
-		dappToken = IERC20 (_dappToken);
+	constructor(address _dappToken, address _daiToken) {
+        dappToken = IERC20 (_dappToken);
 		daiToken = IERC20 (_daiToken);
 		
 	}
 
-	event Stake(address indexed owner, uint256 id, uint256 amount, uint256 time);
-    event UnStake(address indexed owner, uint256 id, uint256 amount, uint256 time, uint256 rewardTokens);
+	event Stake(address indexed owner, uint256 amount, uint256 time);
+    event UnStake(address indexed owner, uint256 amount, uint256 time, uint256 rewardTokens);
 
 	
 	function calculateRate() private view returns(uint8) {
@@ -50,28 +52,33 @@ contract farming {
     }
 	
 	
-	function stakeToken(uint256 _tokenId, uint256 _amount) public {
+	function stakeToken( uint256 _amount) public  {
        require(daiToken.balanceOf(msg.sender) >= _amount,'you dont have enough balance');
+        
         stakes[msg.sender] = Staker( _amount, block.timestamp);
-        daiToken.safeTransferFrom(msg.sender, address(this), _amount);
-        emit Stake (msg.sender, _tokenId, _amount, block.timestamp);
+        
+        daiToken.safeTransferFrom(msg.sender, address(this), _amount);  
+        
+        emit Stake (msg.sender, _amount, block.timestamp);
+
+        
     }
 
 	
-	
-	function unStakeToken(uint256 _tokenId, uint256 _amount) public {
+	function unStakeToken( uint256 _amount) public {
         stakes[msg.sender].amount -= _amount;
+        daiToken.safeTransferFrom( address(this), msg.sender, _amount);
+
 
         uint256 time = block.timestamp - stakes[msg.sender].timestamp;
         uint256 reward =  calculateRate() * time * _amount * 10 ** 18 / month * 12   ;
 
         dappToken.safeTransfer( msg.sender, reward);
 
-        emit UnStake(msg.sender, _tokenId, _amount,  block.timestamp, reward);
+        emit UnStake(msg.sender, _amount,  block.timestamp, reward);
     }
 
 }
-
 
 
 
